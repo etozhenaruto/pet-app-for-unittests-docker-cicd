@@ -18,8 +18,6 @@ import java.util.List;
 @AllArgsConstructor
 public class CartDto {
 
-    private Long userId;
-
     @Builder.Default
     private List<CartItemDto> items = new ArrayList<>();
 

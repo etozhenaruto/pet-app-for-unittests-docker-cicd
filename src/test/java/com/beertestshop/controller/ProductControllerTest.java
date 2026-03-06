@@ -71,30 +71,33 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-001: Получение всех активных продуктов - успех")
     void getAllProducts_Success() throws Exception {
-        // Arrange
+        // Подготовка
         List<ProductDto> products = Arrays.asList(testProduct);
         given(productService.findAllActive()).willReturn(products);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Test Lager"))
-                .andExpect(jsonPath("$[0].price").value(150.00));
+                .andExpect(jsonPath("$[0].description").value("Test Description"))
+                .andExpect(jsonPath("$[0].price").value(150.00))
+                .andExpect(jsonPath("$[0].quantity").value(10))
+                .andExpect(jsonPath("$[0].isActive").value(true))
+                .andExpect(jsonPath("$[0].imageUrl").value("https://example.com/test.jpg"));
 
-        // Verify
         verify(productService, times(1)).findAllActive();
     }
 
     @Test
     @DisplayName("TC-002: Получение всех активных продуктов - пустой список")
     void getAllProducts_EmptyList() throws Exception {
-        // Arrange
+        // Подготовка
         given(productService.findAllActive()).willReturn(List.of());
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -106,7 +109,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-003: Получение всех продуктов (включая неактивные) - успех")
     void getAllProductsIncludingInactive_Success() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto inactiveProduct = ProductDto.builder()
                 .id(2L)
                 .name("Inactive Beer")
@@ -119,7 +122,7 @@ class ProductControllerTest {
         List<ProductDto> products = Arrays.asList(testProduct, inactiveProduct);
         given(productService.findAll()).willReturn(products);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(get("/api/v1/products/all"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -133,10 +136,10 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-004: Получение продукта по ID - успех")
     void getProductById_Success() throws Exception {
-        // Arrange
+        // Подготовка
         given(productService.findById(1L)).willReturn(Optional.of(testProduct));
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(get("/api/v1/products/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
@@ -148,10 +151,10 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-005: Получение продукта по ID - продукт не найден")
     void getProductById_NotFound() throws Exception {
-        // Arrange
+        // Подготовка
         given(productService.findById(999L)).willReturn(Optional.empty());
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(get("/api/v1/products/999"))
                 .andExpect(status().isNotFound());
     }
@@ -161,7 +164,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-006: Создание нового продукта - успех")
     void createProduct_Success() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto createdProduct = ProductDto.builder()
                 .id(1L)
                 .name("New Beer")
@@ -173,7 +176,7 @@ class ProductControllerTest {
                 .build();
         given(productService.save(any(ProductDto.class))).willReturn(createdProduct);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createdProduct)))
@@ -182,14 +185,14 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.name").value("New Beer"))
                 .andExpect(jsonPath("$.price").value(200.00));
 
-        // Verify
+        // Проверка
         verify(productService, times(1)).save(any(ProductDto.class));
     }
 
     @Test
     @DisplayName("TC-007: Создание продукта - валидация: пустое имя")
     void createProduct_Validation_EmptyName() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto invalidProduct = ProductDto.builder()
                 .name("")
                 .price(new BigDecimal("100.00"))
@@ -197,7 +200,7 @@ class ProductControllerTest {
                 .isActive(true)
                 .build();
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidProduct)))
@@ -207,7 +210,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-008: Создание продукта - валидация: отрицательная цена")
     void createProduct_Validation_NegativePrice() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto invalidProduct = ProductDto.builder()
                 .name("Test Beer")
                 .price(new BigDecimal("-10.00"))
@@ -215,7 +218,7 @@ class ProductControllerTest {
                 .isActive(true)
                 .build();
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidProduct)))
@@ -225,7 +228,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-009: Создание продукта - валидация: отрицательное количество")
     void createProduct_Validation_NegativeQuantity() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto invalidProduct = ProductDto.builder()
                 .name("Test Beer")
                 .price(new BigDecimal("100.00"))
@@ -233,7 +236,7 @@ class ProductControllerTest {
                 .isActive(true)
                 .build();
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidProduct)))
@@ -245,7 +248,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-010: Обновление продукта - успех")
     void updateProduct_Success() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto updatedProduct = ProductDto.builder()
                 .id(1L)
                 .name("Updated Beer")
@@ -257,7 +260,7 @@ class ProductControllerTest {
                 .build();
         given(productService.update(eq(1L), any(ProductDto.class))).willReturn(updatedProduct);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(put("/api/v1/products/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updatedProduct)))
@@ -270,7 +273,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-011: Обновление продукта - продукт не найден")
     void updateProduct_NotFound() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto product = ProductDto.builder()
                 .id(999L)
                 .name("Not Found")
@@ -281,7 +284,7 @@ class ProductControllerTest {
         given(productService.update(eq(999L), any(ProductDto.class)))
                 .willThrow(new RuntimeException("Product not found"));
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(put("/api/v1/products/999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(product)))
@@ -293,7 +296,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-012: Переключение статуса продукта - успех")
     void toggleProductStatus_Success() throws Exception {
-        // Arrange
+        // Подготовка
         ProductDto toggledProduct = ProductDto.builder()
                 .id(1L)
                 .name("Test Lager")
@@ -306,7 +309,7 @@ class ProductControllerTest {
         given(productService.findById(1L)).willReturn(Optional.of(testProduct));
         given(productService.update(eq(1L), any(ProductDto.class))).willReturn(toggledProduct);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(put("/api/v1/products/1/toggle-status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
@@ -316,10 +319,10 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-013: Переключение статуса - продукт не найден")
     void toggleProductStatus_NotFound() throws Exception {
-        // Arrange
+        // Подготовка
         given(productService.findById(999L)).willReturn(Optional.empty());
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(put("/api/v1/products/999/toggle-status"))
                 .andExpect(status().isNotFound());
     }
@@ -329,24 +332,24 @@ class ProductControllerTest {
     @Test
     @DisplayName("TC-014: Удаление продукта - успех")
     void deleteProduct_Success() throws Exception {
-        // Arrange
+        // Подготовка
         given(productService.delete(1L)).willReturn(true);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(delete("/api/v1/products/1"))
                 .andExpect(status().isNoContent());
 
-        // Verify
+        // Проверка
         verify(productService, times(1)).delete(1L);
     }
 
     @Test
     @DisplayName("TC-015: Удаление продукта - продукт не найден")
     void deleteProduct_NotFound() throws Exception {
-        // Arrange
+        // Подготовка
         given(productService.delete(999L)).willReturn(false);
 
-        // Act & Assert
+        // Действие и проверка
         mockMvc.perform(delete("/api/v1/products/999"))
                 .andExpect(status().isNotFound());
     }

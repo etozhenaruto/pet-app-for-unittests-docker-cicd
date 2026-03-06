@@ -27,7 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Тесты для CartController - проверка всех эндпоинтов управления корзиной.
- * 
  * Тестовые кейсы:
  * - Получение корзины
  * - Добавление товара в корзину
@@ -50,12 +49,12 @@ class CartControllerTest {
 
     private CartDto emptyCart;
     private CartDto cartWithItems;
+    private CartDto cardWithAddingItems;
 
     @BeforeEach
     void setUp() {
         // Пустая корзина
         emptyCart = CartDto.builder()
-                .userId(1L)
                 .items(List.of())
                 .totalQuantity(0)
                 .totalPrice(BigDecimal.ZERO)
@@ -64,7 +63,7 @@ class CartControllerTest {
         // Корзина с товарами
         CartItemDto item1 = CartItemDto.builder()
                 .productId(1L)
-                .productName("Light Lager")
+                .productName("Beer")
                 .quantity(2)
                 .price(new BigDecimal("150.00"))
                 .total(new BigDecimal("300.00"))
@@ -72,18 +71,32 @@ class CartControllerTest {
 
         CartItemDto item2 = CartItemDto.builder()
                 .productId(2L)
-                .productName("Amber Ale")
+                .productName("Pivchik")
                 .quantity(1)
                 .price(new BigDecimal("180.00"))
                 .total(new BigDecimal("180.00"))
                 .build();
-
+        
+        CartItemDto  item3 = CartItemDto.builder()
+                .productId(3L)
+                .productName("Pivasik")
+                .quantity(6)
+                .price(new BigDecimal("228"))
+                .total(new BigDecimal("1337"))
+                .build();
+        
         cartWithItems = CartDto.builder()
-                .userId(1L)
-                .items(List.of(item1, item2))
+                .items(List.of(item1, item2, item3))
                 .totalQuantity(3)
                 .totalPrice(new BigDecimal("480.00"))
                 .build();
+
+        cardWithAddingItems = CartDto.builder()
+                .items(List.of(item1))
+                .totalQuantity(1)
+                .totalPrice(new BigDecimal("300"))
+                .build();
+
     }
 
     // ==================== GET /api/v1/cart ====================
@@ -91,38 +104,52 @@ class CartControllerTest {
     @Test
     @DisplayName("TC-201: Получение корзины - пустая корзина")
     void getCart_Empty() throws Exception {
-        // Arrange
-        given(cartService.getCartByUserId(1L)).willReturn(emptyCart);
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.getCart()).willReturn(emptyCart);
 
-        // Act & Assert
+        // Имитация запроса и проверка респонса
         mockMvc.perform(get("/api/v1/cart"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(1))
                 .andExpect(jsonPath("$.items").isArray())
                 .andExpect(jsonPath("$.items.length()").value(0))
                 .andExpect(jsonPath("$.totalQuantity").value(0))
                 .andExpect(jsonPath("$.totalPrice").value(0));
 
-        // Verify
-        verify(cartService, times(1)).getCartByUserId(1L);
+        // Проверка что метод вызывался не более одного раза  что метод вызывался не более одного раза 
+        verify(cartService, times(1)).getCart();
     }
 
     @Test
     @DisplayName("TC-202: Получение корзины - корзина с товарами")
     void getCart_WithItems() throws Exception {
-        // Arrange
-        given(cartService.getCartByUserId(1L)).willReturn(cartWithItems);
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.getCart()).willReturn(cartWithItems);
 
-        // Act & Assert
+        // Имитация запроса и проверка респонса
         mockMvc.perform(get("/api/v1/cart"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(1))
-                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items.length()").value(3))
                 .andExpect(jsonPath("$.totalQuantity").value(3))
                 .andExpect(jsonPath("$.totalPrice").value(480.00))
                 .andExpect(jsonPath("$.items[0].productId").value(1))
-                .andExpect(jsonPath("$.items[0].productName").value("Light Lager"))
-                .andExpect(jsonPath("$.items[0].quantity").value(2));
+                .andExpect(jsonPath("$.items[0].quantity").value(2))
+                .andExpect(jsonPath("$.items[0].productName").value("Beer"))
+                .andExpect(jsonPath("$.items[0].price").value(150))
+                .andExpect(jsonPath("$.items[0].total").value(300))
+                .andExpect(jsonPath("$.items[1].productId").value(2))
+                .andExpect(jsonPath("$.items[1].quantity").value(1))
+                .andExpect(jsonPath("$.items[1].productName").value("Pivchik"))
+                .andExpect(jsonPath("$.items[1].price").value(180))
+                .andExpect(jsonPath("$.items[1].total").value(180))
+                .andExpect(jsonPath("$.items[2].productId").value(3))
+                .andExpect(jsonPath("$.items[2].quantity").value(6))
+                .andExpect(jsonPath("$.items[2].productName").value("Pivasik"))
+                .andExpect(jsonPath("$.items[2].price").value(228))
+                .andExpect(jsonPath("$.items[2].total").value(1337));
+
+        // Проверка что метод вызывался не более одного раза  что метод вызывался не более одного раза 
+        verify(cartService, times(1)).getCart();
+
     }
 
     // ==================== POST /api/v1/cart/add ====================
@@ -130,42 +157,56 @@ class CartControllerTest {
     @Test
     @DisplayName("TC-203: Добавление товара в корзину - успех")
     void addToCart_Success() throws Exception {
-        // Arrange
+        // Обьект для реквеста
         AddToCartRequest request = new AddToCartRequest(1L, 2);
-        given(cartService.addItem(eq(1L), eq(1L), eq(2))).willReturn(cartWithItems);
 
-        // Act & Assert
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.addItem(1L,2)).willReturn(cardWithAddingItems);
+
+        // Имитация запроса и проверка респонса
         mockMvc.perform(post("/api/v1/cart/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalQuantity").value(3))
-                .andExpect(jsonPath("$.totalPrice").value(480.00));
+                .andExpect(jsonPath("$.items[0].productId").value(1))
+                .andExpect(jsonPath("$.items[0].quantity").value(2))
+                .andExpect(jsonPath("$.items[0].productName").value("Beer"))
+                .andExpect(jsonPath("$.items[0].price").value(150))
+                .andExpect(jsonPath("$.items[0].total").value(300))
+                .andExpect(jsonPath("$.totalQuantity").value(1))
+                .andExpect(jsonPath("$.totalPrice").value(300));
 
-        // Verify
-        verify(cartService, times(1)).addItem(1L, 1L, 2);
+        // Проверка что метод вызывался не более одного раза 
+        verify(cartService, times(1)).addItem(1L,  2);
     }
 
+
+    //TODO разобраться нужны ли вообще юнит тесты на проверку валидации спрингом или мы ему верим и такое не проверяем
     @Test
     @DisplayName("TC-204: Добавление товара - валидация: нулевое количество")
     void addToCart_Validation_ZeroQuantity() throws Exception {
-        // Arrange
+        // Обьект для реквеста
         AddToCartRequest request = new AddToCartRequest(1L, 0);
 
-        // Act & Assert
+        // Имитация запроса и проверка респонса ( установлена валидация на дто
+        // @Min(value = 1, message = "Количество должно быть больше 0"
+        // private Integer quantity;)
         mockMvc.perform(post("/api/v1/cart/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 
+    //TODO разобраться нужны ли вообще юнит тесты на проверку валидации спрингом или мы ему верим и такое не проверяем
     @Test
     @DisplayName("TC-205: Добавление товара - валидация: отрицательное количество")
     void addToCart_Validation_NegativeQuantity() throws Exception {
-        // Arrange
+        // Обьект для реквеста
         AddToCartRequest request = new AddToCartRequest(1L, -5);
 
-        // Act & Assert
+        // Имитация запроса и проверка респонса ( установлена валидация на дто
+        // @Min(value = 1, message = "Количество должно быть больше 0"
+        // private Integer quantity;)
         mockMvc.perform(post("/api/v1/cart/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -175,31 +216,34 @@ class CartControllerTest {
     @Test
     @DisplayName("TC-206: Добавление товара - ошибка: товар не найден")
     void addToCart_ProductNotFound() throws Exception {
-        // Arrange
+        // Обьект для реквеста
         AddToCartRequest request = new AddToCartRequest(999L, 1);
-        given(cartService.addItem(eq(1L), eq(999L), eq(1)))
+
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.addItem(999L, 1))
                 .willThrow(new IllegalArgumentException("Товар не найден с id: 999"));
 
-        // Act & Assert - IllegalArgumentException обрабатывается как 400 Bad Request
+        // Имитация запроса и проверка респонса - IllegalArgumentException обрабатывается как 400 Bad Request
         mockMvc.perform(post("/api/v1/cart/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Товар не найден с id: 999"));
     }
-
     @Test
     @DisplayName("TC-207: Добавление товара - ошибка: недостаточно товара на складе")
     void addToCart_InsufficientStock() throws Exception {
-        // Arrange
+        // Обьект для реквеста
         AddToCartRequest request = new AddToCartRequest(1L, 100);
-        given(cartService.addItem(eq(1L), eq(1L), eq(100)))
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.addItem(1L,100))
                 .willThrow(new IllegalArgumentException("Недостаточно товара на складе. Доступно: 5 шт."));
-
-        // Act & Assert - IllegalArgumentException обрабатывается как 400 Bad Request
+        // Имитация запроса и проверка респонса - IllegalArgumentException обрабатывается как 400 Bad Request
         mockMvc.perform(post("/api/v1/cart/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Недостаточно товара на складе. Доступно: 5 шт."));
     }
 
     // ==================== DELETE /api/v1/cart/remove ====================
@@ -207,61 +251,36 @@ class CartControllerTest {
     @Test
     @DisplayName("TC-208: Удаление товара из корзины - успех")
     void removeFromCart_Success() throws Exception {
-        // Arrange
-        given(cartService.removeItem(1L, 1L)).willReturn(emptyCart);
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.removeItem( 1L)).willReturn(emptyCart);
 
-        // Act & Assert
+        // Имитация запроса и проверка респонса
         mockMvc.perform(delete("/api/v1/cart/remove")
                         .param("productId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()").value(0))
                 .andExpect(jsonPath("$.totalQuantity").value(0));
 
-        // Verify
-        verify(cartService, times(1)).removeItem(1L, 1L);
-    }
-
-    @Test
-    @DisplayName("TC-209: Удаление товара - ошибка: корзина не найдена")
-    void removeFromCart_CartNotFound() throws Exception {
-        // Arrange
-        given(cartService.removeItem(1L, 999L))
-                .willThrow(new RuntimeException("Cart not found for user: 1"));
-
-        // Act & Assert
-        mockMvc.perform(delete("/api/v1/cart/remove")
-                        .param("productId", "999"))
-                .andExpect(status().is5xxServerError());
+        // Проверка что метод вызывался не более одного раза
+        verify(cartService, times(1)).removeItem( 1L);
     }
 
     // ==================== DELETE /api/v1/cart/clear ====================
 
     @Test
-    @DisplayName("TC-210: Очистка корзины - успех")
+    @DisplayName("TC-209: Очистка корзины - успех")
     void clearCart_Success() throws Exception {
-        // Arrange
-        given(cartService.clearCart(1L)).willReturn(emptyCart);
-
-        // Act & Assert
+        // Настройка мока, что будет возвращать mockMvc
+        given(cartService.clearCart()).willReturn(emptyCart);
+        // Имитация запроса и проверка респонса
         mockMvc.perform(delete("/api/v1/cart/clear"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()").value(0))
                 .andExpect(jsonPath("$.totalQuantity").value(0))
                 .andExpect(jsonPath("$.totalPrice").value(0));
-
-        // Verify
-        verify(cartService, times(1)).clearCart(1L);
+        // Проверка что метод вызывался не более одного раза
+        verify(cartService, times(1)).clearCart();
     }
 
-    @Test
-    @DisplayName("TC-211: Очистка корзины - ошибка: корзина не найдена")
-    void clearCart_CartNotFound() throws Exception {
-        // Arrange
-        given(cartService.clearCart(1L))
-                .willThrow(new RuntimeException("Cart not found for user: 1"));
 
-        // Act & Assert
-        mockMvc.perform(delete("/api/v1/cart/clear"))
-                .andExpect(status().is5xxServerError());
-    }
 }

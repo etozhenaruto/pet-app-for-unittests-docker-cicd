@@ -30,15 +30,14 @@ public class CartService {
     private static final int MAX_ITEM_QUANTITY = 5;
 
     /**
-     * Получить корзину пользователя.
+     * Получить корзину.
      */
     @Transactional(readOnly = true)
-    public CartDto getCartByUserId(Long userId) {
-        log.debug("Getting cart for user: {}", userId);
-        return cartRepository.findByUserId(userId)
+    public CartDto getCart() {
+        log.debug("Getting cart");
+        return cartRepository.findFirst()
                 .map(this::toDTO)
                 .orElse(CartDto.builder()
-                        .userId(userId)
                         .items(List.of())
                         .totalQuantity(0)
                         .totalPrice(BigDecimal.ZERO)
@@ -49,8 +48,8 @@ public class CartService {
      * Добавить товар в корзину.
      */
     @Transactional
-    public CartDto addItem(Long userId, Long productId, Integer quantity) {
-        log.debug("Adding product {} to cart of user {} with quantity {}", productId, userId, quantity);
+    public CartDto addItem(Long productId, Integer quantity) {
+        log.debug("Adding product {} with quantity {}", productId, quantity);
 
         var product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Товар не найден с id: " + productId));
@@ -63,10 +62,9 @@ public class CartService {
             throw new IllegalArgumentException("Недостаточно товара на складе. Доступно: " + product.getQuantity() + " шт.");
         }
 
-        CartEntity cart = cartRepository.findByUserId(userId)
+        CartEntity cart = cartRepository.findFirst()
                 .orElseGet(() -> {
                     CartEntity newCart = CartEntity.builder()
-                            .userId(userId)
                             .items(new java.util.HashSet<>())
                             .build();
                     return cartRepository.save(newCart);
@@ -96,7 +94,7 @@ public class CartService {
         productRepository.save(product);
 
         CartEntity saved = cartRepository.save(cart);
-        log.info("Product {} added to cart of user {}", productId, userId);
+        log.info("Product {} added to cart", productId);
         return toDTO(saved);
     }
 
@@ -104,11 +102,11 @@ public class CartService {
      * Удалить товар из корзины.
      */
     @Transactional
-    public CartDto removeItem(Long userId, Long productId) {
-        log.debug("Removing product {} from cart of user {}", productId, userId);
+    public CartDto removeItem(Long productId) {
+        log.debug("Removing product {} from cart", productId);
 
-        CartEntity cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Cart not found for user: " + userId));
+        CartEntity cart = cartRepository.findFirst()
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
 
         var itemOpt = cart.getItems().stream()
                 .filter(item -> item.getProductId().equals(productId))
@@ -121,12 +119,12 @@ public class CartService {
                     .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
             product.setQuantity(product.getQuantity() + item.getQuantity());
             productRepository.save(product);
-            
+
             cart.removeItem(item);
         }
 
         CartEntity saved = cartRepository.save(cart);
-        log.info("Product {} removed from cart of user {}", productId, userId);
+        log.info("Product {} removed from cart", productId);
         return toDTO(saved);
     }
 
@@ -134,11 +132,11 @@ public class CartService {
      * Очистить корзину.
      */
     @Transactional
-    public CartDto clearCart(Long userId) {
-        log.debug("Clearing cart for user: {}", userId);
+    public CartDto clearCart() {
+        log.debug("Clearing cart");
 
-        CartEntity cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Cart not found for user: " + userId));
+        CartEntity cart = cartRepository.findFirst()
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
 
         // Возвращаем все товары на склад
         for (var item : cart.getItems()) {
@@ -152,7 +150,7 @@ public class CartService {
 
         cart.clear();
         CartEntity saved = cartRepository.save(cart);
-        log.info("Cart cleared for user {}", userId);
+        log.info("Cart cleared");
         return toDTO(saved);
     }
 
@@ -170,7 +168,6 @@ public class CartService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return CartDto.builder()
-                .userId(entity.getUserId())
                 .items(itemDTOs)
                 .totalQuantity(totalQuantity)
                 .totalPrice(totalPrice)

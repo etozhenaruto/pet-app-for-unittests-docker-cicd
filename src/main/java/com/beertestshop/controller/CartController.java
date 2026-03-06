@@ -29,9 +29,6 @@ public class CartController {
 
     private final CartService cartService;
 
-    // Используем фиксированный ID для корзины (без авторизации)
-    private static final Long DEFAULT_CART_ID = 1L;
-
     /**
      * Получить текущую корзину.
      */
@@ -39,7 +36,7 @@ public class CartController {
     @Operation(summary = "Получить корзину", description = "Возвращает корзину")
     public ResponseEntity<CartDto> getCart() {
         log.debug("Getting cart");
-        CartDto cart = cartService.getCartByUserId(DEFAULT_CART_ID);
+        CartDto cart = cartService.getCart();
         return ResponseEntity.ok(cart);
     }
 
@@ -51,7 +48,7 @@ public class CartController {
     public ResponseEntity<CartDto> addToCart(@Valid @RequestBody AddToCartRequest request) {
         log.info("Adding {} items of product {} to cart", request.getQuantity(), request.getProductId());
 
-        CartDto cart = cartService.addItem(DEFAULT_CART_ID, request.getProductId(), request.getQuantity());
+        CartDto cart = cartService.addItem(request.getProductId(), request.getQuantity());
         log.info("Cart updated: {} items", cart.getItems().size());
         return ResponseEntity.ok(cart);
     }
@@ -64,7 +61,7 @@ public class CartController {
     public ResponseEntity<CartDto> removeFromCart(@RequestParam Long productId) {
         log.info("Removing product {} from cart", productId);
 
-        CartDto cart = cartService.removeItem(DEFAULT_CART_ID, productId);
+        CartDto cart = cartService.removeItem(productId);
         return ResponseEntity.ok(cart);
     }
 
@@ -76,7 +73,7 @@ public class CartController {
     public ResponseEntity<CartDto> clearCart() {
         log.info("Clearing cart");
 
-        CartDto cart = cartService.clearCart(DEFAULT_CART_ID);
+        CartDto cart = cartService.clearCart();
         return ResponseEntity.ok(cart);
     }
 }

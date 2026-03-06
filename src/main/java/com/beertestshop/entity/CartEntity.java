@@ -20,7 +20,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * JPA-сущность корзины пользователя.
+ * JPA-сущность корзины.
  */
 @Getter
 @Setter
@@ -34,9 +34,6 @@ public class CartEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "user_id", unique = true)
-    private Long userId;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<CartItemEntity> items;
