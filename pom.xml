@@ -116,6 +116,7 @@
 				<configuration>
 					<targetJdk>${java.version}</targetJdk>
 					<printFailingErrors>true</printFailingErrors>
+					<failOnViolation>true</failOnViolation>
 					<rulesets>
 						<ruleset>category/java/bestpractices.xml</ruleset>
 						<ruleset>category/java/errorprone.xml</ruleset>

@@ -40,8 +40,14 @@ jobs:
         run: mvn clean package -DskipTests
 
       # Проверка качества кода
-      - name: Code quality check
+      - name: Code quality check (non-blocking)
         run: mvn pmd:check checkstyle:check
+        continue-on-error: true
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+
+      - name: Code quality check (blocking for main)
+        run: mvn pmd:check checkstyle:check
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
       # Запуск тестов (все по умолчанию или выбранные)
       - name: Run unit tests
@@ -55,11 +61,29 @@ jobs:
           report_paths: '**/target/surefire-reports/TEST-*.xml'
           fail_on_failure: true
 
-      # Сохранение отчётов
+      # Сохранение отчётов о тестах
       - name: Upload test reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-reports
           path: target/surefire-reports/
+          retention-days: 7
+
+      # Сохранение отчёта PMD
+      - name: Upload PMD report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pmd-report
+          path: target/pmd.xml
+          retention-days: 7
+
+      # Сохранение отчёта Checkstyle
+      - name: Upload Checkstyle report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checkstyle-report
+          path: target/checkstyle-result.xml
           retention-days: 7
