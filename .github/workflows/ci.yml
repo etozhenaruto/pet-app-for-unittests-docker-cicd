@@ -1,0 +1,63 @@
+# CI/CD Workflow для BeerTestShop
+# Запускается при любом пуше и merge в main
+
+name: CI Pipeline
+
+on:
+  push:
+  pull_request:
+    branches: [ "main" ]
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    inputs:
+      test-pattern:
+        description: 'Теги для запуска определенных тестов например: **/*ControllerTest.java, по дефолту запускаются все'
+        required: false
+        default: '**/*Test.java'
+    steps:
+      # Скачивание кода из репы
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Установка Java
+      - name: ☕ Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      # Сборка проекта
+      - name: Build project
+        run: mvn clean package -DskipTests
+
+      # Проверка качества кода
+      - name: Code quality check
+        run: mvn pmd:check checkstyle:check
+
+      # Запуск тестов (все по умолчанию)
+      - name: Run unit tests
+        run: mvn test -Dtest=${{ inputs.test-pattern }}
+
+      # Отчёт о тестах
+      - name:  Publish test report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: '**/target/surefire-reports/TEST-*.xml'
+          fail_on_failure: true
+
+      # Сохранение отчётов
+      - name: 📦 Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: target/surefire-reports/
+          retention-days: 7

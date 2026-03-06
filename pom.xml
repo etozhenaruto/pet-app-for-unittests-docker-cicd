@@ -108,6 +108,31 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.1.2</version>
 			</plugin>
+			<!-- PMD - проверка качества кода -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.21.2</version>
+				<configuration>
+					<targetJdk>${java.version}</targetJdk>
+					<printFailingErrors>true</printFailingErrors>
+					<rulesets>
+						<ruleset>category/java/bestpractices.xml</ruleset>
+						<ruleset>category/java/errorprone.xml</ruleset>
+					</rulesets>
+				</configuration>
+			</plugin>
+			<!-- Checkstyle - проверка стиля кода -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.3.1</version>
+				<configuration>
+					<configLocation>google_checks.xml</configLocation>
+					<consoleOutput>true</consoleOutput>
+					<failsOnError>true</failsOnError>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 
