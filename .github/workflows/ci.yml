@@ -7,6 +7,13 @@ on:
   push:
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      test-pattern:
+        description: 'Теги для запуска определенных тестов например: **/*ControllerTest.java, по дефолту запускаются все'
+        required: false
+        default: '**/*Test.java'
+
 env:
   JAVA_VERSION: '17'
 
@@ -15,18 +22,13 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
 
-    inputs:
-      test-pattern:
-        description: 'Теги для запуска определенных тестов например: **/*ControllerTest.java, по дефолту запускаются все'
-        required: false
-        default: '**/*Test.java'
     steps:
       # Скачивание кода из репы
       - name: Checkout code
         uses: actions/checkout@v4
 
       # Установка Java
-      - name: ☕ Set up Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
@@ -41,12 +43,12 @@ jobs:
       - name: Code quality check
         run: mvn pmd:check checkstyle:check
 
-      # Запуск тестов (все по умолчанию)
+      # Запуск тестов (все по умолчанию или выбранные)
       - name: Run unit tests
-        run: mvn test -Dtest=${{ inputs.test-pattern }}
+        run: mvn test -Dtest=${{ inputs.test-pattern || '**/*Test.java' }}
 
       # Отчёт о тестах
-      - name:  Publish test report
+      - name: Publish test report
         uses: mikepenz/action-junit-report@v4
         if: always()
         with:
@@ -54,7 +56,7 @@ jobs:
           fail_on_failure: true
 
       # Сохранение отчётов
-      - name: 📦 Upload test reports
+      - name: Upload test reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
